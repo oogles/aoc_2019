@@ -1,0 +1,7 @@
+Advent of Code 2019
+
+Each day's puzzle input is found in the inputs/ directory, named for the day it belongs to.
+Each day's code solution exists in the solutions/ directory, also named for the day it belongs to.
+To run a solution, execute the following *from this directory*:
+
+python -m solutions.day1
