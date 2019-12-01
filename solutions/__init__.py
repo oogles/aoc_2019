@@ -17,12 +17,14 @@ class AdventOfCode:
         
         self.test = test
     
-    def _get_input_path(self):
+    def _get_input_file_name(self):
         
         base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         subdir = 'samples' if self.test else 'inputs'
         
-        return os.path.join(base_path, subdir)
+        path = os.path.join(base_path, subdir)
+        
+        return '{}/day{:02d}'.format(path, self.day)
     
     def _get_input_line_data(self, input_line):
         
@@ -34,7 +36,7 @@ class AdventOfCode:
     
     def get_input(self):
         
-        input_file = '{}/day{}'.format(self._get_input_path(), self.day)
+        input_file = self._get_input_file_name()
         
         if self.process_as_list:
             input_data = []
@@ -69,7 +71,10 @@ class AdventOfCode:
         try:
             input_data = self.get_input()
         except FileNotFoundError:
-            print('No {}input data file found.'.format('sample ' if self.test else ''))
+            print('No {}input data file found (looked in {}).'.format(
+                'sample ' if self.test else '',
+                self._get_input_file_name()
+            ))
             return
         
         t = (datetime.datetime.now() - start).total_seconds()
