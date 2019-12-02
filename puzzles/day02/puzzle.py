@@ -1,16 +1,14 @@
-from . import AdventOfCode
-from . import intcode
+from ..aoc import Puzzle
+from .. import intcode
 
 
-class Day(AdventOfCode):
+class P(Puzzle):
     
-    day = 2
+    input_delimiter = ','
     
-    process_as_list = False
-    
-    def _get_input_data(self, input_data):
+    def process_input_item(self, input_item):
         
-        return [int(i) for i in input_data.split(',')]
+        return int(input_item)
     
     def _part1(self, input_data):
         
@@ -33,7 +31,3 @@ class Day(AdventOfCode):
                     return 100 * noun + verb
         else:
             raise Exception('No matching noun/verb found')
-
-
-if __name__ == '__main__':
-    Day(test=False).solve()

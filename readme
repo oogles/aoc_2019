@@ -1,7 +1,12 @@
 Advent of Code 2019
+===================
 
-Each day's puzzle input is found in the inputs/ directory, named for the day it belongs to.
-Each day's code solution exists in the solutions/ directory, also named for the day it belongs to.
-To run a solution, execute the following *from this directory*:
+Each day's puzzle is found in the puzzles/ package, in a package named for the day it belongs to.
+Puzzle input data should be added to an ``input`` file in that package.
+Puzzle sample data should be added to a ``sample`` file in that package.
+The puzzle solver should be created at ``puzzle.py`` in that package, as an instance of ``puzzles.aoc.Puzzle`` and named ``P``.
 
-python -m solutions.day01
+To run a solution, use the ``run.py`` script found in this directory.
+E.g. For day 1:
+    
+    python3 run 1

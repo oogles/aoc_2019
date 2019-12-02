@@ -1,13 +1,11 @@
-from . import AdventOfCode
+from ..aoc import Puzzle
 
 
-class Day(AdventOfCode):
+class P(Puzzle):
     
-    day = 1
-    
-    def _get_input_line_data(self, input_line):
+    def process_input_item(self, input_item):
         
-        return int(input_line)
+        return int(input_item)
     
     def _part1(self, input_data):
         
@@ -27,7 +25,3 @@ class Day(AdventOfCode):
             total_fuel += module_fuel
         
         return total_fuel
-
-
-if __name__ == '__main__':
-    Day(test=False).solve()
