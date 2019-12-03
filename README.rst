@@ -1,7 +1,7 @@
 Advent of Code 2019
 ===================
 
-Each day's puzzle is found in the ``puzzles/`` directory, in a subdirectory named for the day it belongs to, using the structure defined by `https://github.com/oogles/aoc_base`_.
+Each day's puzzle is found in the ``puzzles/`` directory, in a subdirectory named for the day it belongs to, using the structure defined by https://github.com/oogles/aoc_base.
 
 To run a solution for a given day, e.g. day 1, use::
     
