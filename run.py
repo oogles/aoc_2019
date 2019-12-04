@@ -1,15 +1,6 @@
+import argparse
 import importlib
 import sys
-
-
-def validate_day(day):
-    
-    day = int(day)  # could raise ValueError
-    
-    if day < 1 or day > 25:
-        raise ValueError('Must be between 1 and 25.')
-    
-    return day
 
 
 def get_module(day):
@@ -17,32 +8,46 @@ def get_module(day):
     return importlib.import_module(f'puzzles.day{day:02d}.puzzle')
 
 
-def solve_puzzle(module):
+def solve_puzzle(module, args, v=2):
     
     try:
-        puzzle = module.P(sample=sample)
+        puzzle = module.P(sample=args.sample, verbosity=v)
     except AttributeError as e:
         print(e)
         print('You should fix that.')
         sys.exit(1)
     
-    puzzle.solve()
+    part1 = args.part1
+    part2 = args.part2
+    if part1 == part2:  # either both set or neither set
+        puzzle.solve()
+    elif part1:
+        puzzle.solve_part1()
+    elif part2:
+        puzzle.solve_part2()
+    else:
+        # https://xkcd.com/2200/
+        raise Exception('How?')
 
-if __name__ == '__main__':
+
+def main():
     
-    # Check for "--sample" flag
-    flags = sys.argv[2:]
-    sample = '--sample' in flags
+    parser = argparse.ArgumentParser()
     
-    # Extract and validate "day" argument
-    try:
-        day = sys.argv[1]
-    except IndexError:
-        print('Missing argument. Either specify 1-25 to run that day\'s puzzle, or use the --all flag to run all puzzles.')
-        sys.exit(1)
+    parser.add_argument('day', nargs='?', type=int)
+    parser.add_argument('--all', action='store_true')
+    parser.add_argument('--sample', action='store_true')
+    parser.add_argument('-p1', '--part1', action='store_true')
+    parser.add_argument('-p2', '--part2', action='store_true')
     
-    if day == '--all':
+    args = parser.parse_args()
+    
+    if args.all:
         # Import and execute puzzle solver for all days in the calendar
+        if args.sample:
+            print('\n*** USING SAMPLE DATA ***\n')
+        
+        print('-' * 50)
         for day in range(1, 25):
             try:
                 module = get_module(day)
@@ -50,20 +55,27 @@ if __name__ == '__main__':
                 # No puzzle for day, presumably no further puzzles either
                 break
             
-            solve_puzzle(module)
+            print(f'== DAY {day} ==')
+            solve_puzzle(module, args, v=1)
+            print('-' * 50)
     else:
-        try:
-            day = validate_day(day)
-        except ValueError:
-            print('The "day" argument must be an integer between 1 and 25.')
+        # Import and execute puzzle solver for the given day
+        day = args.day
+        if not day or day < 1 or day > 25:
+            print(
+                'Invalid "day" argument. Either specify 1-25 to run that day\'s '
+                'puzzle, or use the --all flag to run all puzzles.'
+            )
             sys.exit(1)
         
-        # Import and execute puzzle solver for the given day
         try:
             module = get_module(day)
         except ModuleNotFoundError as e:
             print(e)
-            print(f'Have you unlocked the day {day} puzzle yet?')
+            print(f'Has a solution been written for the day {day} puzzle yet?')
             sys.exit(1)
         
-        solve_puzzle(module)
+        solve_puzzle(module, args, v=2)
+
+if __name__ == '__main__':
+    main()

@@ -13,9 +13,10 @@ class Puzzle:
     # by overriding _process_input_data().
     input_delimiter = '\n'
     
-    def __init__(self, sample=False):
+    def __init__(self, sample=False, verbosity=2):
         
         self.sample = sample
+        self.verbosity = verbosity
     
     def get_input_file_name(self):
         
@@ -63,23 +64,22 @@ class Puzzle:
     
     def _do_solve(self, solvers):
         
-        print('=' * 50)
-        print('')
+        v = self.verbosity
+        max_v = v > 1
+        line_endings = '\n' if max_v else ''
         
-        if self.sample:
-            print('*** USING SAMPLE INPUT ***')
-            print('')
+        # Get input
+        if max_v:
+            sample = '**SAMPLE** ' if self.sample else ''
+            print('=' * 50, f'\n\nProcessing {sample}', end='')
         
-        print('Processing input...')
+        print('Input...  ', end=line_endings)
         
         start = datetime.datetime.now()
         try:
             input_data = self.get_input()
         except FileNotFoundError:
-            print('No {}input data file found (looked in {}).'.format(
-                'sample ' if self.sample else '',
-                self.get_input_file_name()
-            ))
+            print(f'No input data file found (looked in {self.get_input_file_name()}).')
             return
         
         t = (datetime.datetime.now() - start).total_seconds()
@@ -92,8 +92,12 @@ class Puzzle:
             size = sys.getsizeof(input_data)
             input_desc = f'is {size} bytes'
         
-        print(f'Input {input_desc} ({type(input_data)}) [{t}s]')
+        if max_v:
+            print('Input ', end='')
         
+        print(f'{input_desc} ({type(input_data)}) [{t}s]')
+        
+        # Run solvers
         for part, solver in solvers:
             if self.input_delimiter:
                 # Copy the data so each part is free to manipulate it without
@@ -102,17 +106,22 @@ class Puzzle:
             else:
                 part_input_data = input_data
             
-            print('')
-            print('Solving Part {}...'.format(part))
+            if max_v:
+                print('\nSolving ', end='')
+            
+            print('Part {}... '.format(part), end=line_endings)
             
             start = datetime.datetime.now()
             solution = solver(part_input_data)
             t = (datetime.datetime.now() - start).total_seconds()
             
-            print('Solution: {} [{}s]'.format(solution, t))
+            if max_v:
+                print('Solution: ', end='')
+            
+            print('{} [{}s]'.format(solution, t))
         
-        print('')
-        print('=' * 50)
+        if max_v:
+            print('\n', '=' * 50, sep='')
     
     def _part1(self, input_data):
         
