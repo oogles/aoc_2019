@@ -1,62 +1,26 @@
-import operator
-
-
-def _input():
+class Instruction:
     
-    while True:
-        value = input('Input: ')
+    num_input_params = 0
+    has_output_param = False
+    
+    def __init__(self, ptr, param_modes):
         
-        try:
-            value = int(value)
-            break
-        except ValueError:
-            print('Invalid input. Must be an integer.')
-            continue
-    
-    return value
-
-
-def _output(value):
-    
-    print(value)
-
-
-def run_program(program):
-    
-    # Initialise memory with a copy of the intcode program
-    memory = program[:]
-    
-    instruction_pointer = 0
-    while instruction_pointer < len(program):
+        self.ptr = ptr
+        self.param_modes = param_modes
         
-        instruction_descriptor = str(memory[instruction_pointer])
-        opcode = int(instruction_descriptor[-2:])
-        param_modes = instruction_descriptor[:-2]
+        # The instruction's length covers its first value (containing the
+        # opcode), a variable number of input parameters, and the optional
+        # output parameter
+        self.length = 1 + self.num_input_params + (1 if self.has_output_param else 0)
+    
+    def get_input_params(self, memory):
         
-        if opcode == 99:
-            break
-        elif opcode == 1:
-            operation = operator.add
-            num_input_params = 2
-            has_output_param = True
-        elif opcode == 2:
-            operation = operator.mul
-            num_input_params = 2
-            has_output_param = True
-        elif opcode == 3:
-            operation = _input
-            num_input_params = 0
-            has_output_param = True
-        elif opcode == 4:
-            operation = _output
-            num_input_params = 1
-            has_output_param = False
-        else:
-            raise Exception(f'Unrecognised opcode ({opcode}).')
+        ptr = self.ptr
+        param_modes = self.param_modes
         
         inputs = []
-        for i in range(1, num_input_params + 1):
-            value = memory[instruction_pointer + i]
+        for i in range(1, self.num_input_params + 1):
+            value = memory[ptr + i]
             
             try:
                 mode = param_modes[-i]
@@ -73,15 +37,123 @@ def run_program(program):
             
             inputs.append(value)
         
-        result = operation(*inputs)
+        return inputs
+    
+    def get_output_param(self):
         
-        if has_output_param:
-            output_pointer = memory[instruction_pointer + num_input_params + 1]
+        if not self.has_output_param:
+            return None
+        
+        return self.ptr + self.length - 1
+    
+    def execute(self, *inputs):
+        
+        raise NotImplementedError()
+    
+    def get_next_instruction_pointer(self):
+        
+        return self.ptr + self.length
+
+
+class AddInstruction(Instruction):
+    
+    num_input_params = 2
+    has_output_param = True
+    
+    def execute(self, a, b):
+        
+        return a + b
+
+
+class MultiplyInstruction(Instruction):
+    
+    num_input_params = 2
+    has_output_param = True
+    
+    def execute(self, a, b):
+        
+        return a * b
+
+
+class InputInstruction(Instruction):
+    
+    num_input_params = 0
+    has_output_param = True
+    
+    def execute(self):
+        
+        while True:
+            value = input('Input: ')
+            
+            try:
+                value = int(value)
+                break
+            except ValueError:
+                print('Invalid input. Must be an integer.')
+                continue
+        
+        return value
+
+
+class OutputInstruction(Instruction):
+    
+    num_input_params = 1
+    has_output_param = False
+    
+    def execute(self, value):
+        
+        print(value)
+
+
+def get_instruction(ptr, memory):
+    
+    instruction_descriptor = str(memory[ptr])
+    opcode = int(instruction_descriptor[-2:])
+    param_modes = instruction_descriptor[:-2]
+    
+    if opcode == 99:
+        raise StopIteration()
+    
+    opcode_map = {
+        1: AddInstruction,
+        2: MultiplyInstruction,
+        3: InputInstruction,
+        4: OutputInstruction,
+    }
+    
+    try:
+        instruction = opcode_map[opcode]
+    except KeyError:
+        raise KeyError(f'Unrecognised opcode ({opcode}).')
+    
+    return instruction(ptr, param_modes)
+
+
+def run_program(program):
+    
+    # Initialise memory with a copy of the intcode program
+    memory = program[:]
+    
+    instruction_pointer = 0
+    while instruction_pointer < len(program):
+        
+        try:
+            instruction = get_instruction(instruction_pointer, memory)
+        except StopIteration:
+            break
+        
+        # Use inputs to execute the instruction and generate a result
+        inputs = instruction.get_input_params(memory)
+        result = instruction.execute(*inputs)
+        
+        # Write output to memory, if necessary
+        output_param = instruction.get_output_param()
+        if output_param is not None:
+            output_pointer = memory[output_param]
             memory[output_pointer] = result
         
-        # Proceed to next instruction, skipping over the instruction descriptor
-        # and the appropriate number of parameters
-        instruction_pointer += (1 + num_input_params + (1 if has_output_param else 0))
+        # Proceed to next instruction
+        instruction_pointer = instruction.get_next_instruction_pointer()
     else:
         raise Exception('Reached end of program without seeing opcode 99')
     
