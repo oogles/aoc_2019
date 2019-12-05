@@ -12,12 +12,17 @@ class P(Puzzle):
     
     def _part1(self, input_data):
         
-        input_data[1] = 12
-        input_data[2] = 2
+        # Update noun and verb, but not for sample data
+        if not self.sample:
+            input_data[1] = 12
+            input_data[2] = 2
         
         return intcode.run_program(input_data)
     
     def _part2(self, input_data):
+        
+        if self.sample:
+            return 'Not operable on sample data'
         
         target_output = 19690720
         
