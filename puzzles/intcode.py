@@ -1,3 +1,7 @@
+class UNSET:
+    pass
+
+
 class Instruction:
     
     num_input_params = 0
@@ -105,6 +109,75 @@ class OutputInstruction(Instruction):
         print(value)
 
 
+class JumpInstruction(Instruction):
+    
+    num_input_params = 2
+    has_output_param = False
+    
+    def __init__(self, *args, **kwargs):
+        
+        super().__init__(*args, **kwargs)
+        
+        self.jump_to = UNSET
+    
+    def get_next_instruction_pointer(self):
+        
+        if self.jump_to is UNSET:
+            raise Exception('Instruction not executed.')
+        elif self.jump_to:
+            # Jumping - the next instruction pointer is the jump value
+            return self.jump_to
+        else:
+            # Not jumping - proceed to the next instruction as per usual
+            return super().get_next_instruction_pointer()
+
+
+class JumpIfTrueInstruction(JumpInstruction):
+    
+    def execute(self, test_param, jump_param):
+        
+        if test_param > 0:
+            self.jump_to = jump_param
+        else:
+            self.jump_to = None
+
+
+class JumpIfFalseInstruction(JumpInstruction):
+    
+    def execute(self, test_param, jump_param):
+        
+        if test_param == 0:
+            self.jump_to = jump_param
+        else:
+            self.jump_to = None
+
+
+class LessThanInstruction(Instruction):
+    
+    num_input_params = 2
+    has_output_param = True
+    
+    def execute(self, a, b):
+        
+        if a < b:
+            return 1
+        
+        return 0
+
+
+class EqualsInstruction(Instruction):
+    
+    num_input_params = 2
+    has_output_param = True
+    
+    def execute(self, a, b):
+        
+        if a == b:
+            return 1
+        
+        return 0
+
+
 def get_instruction(ptr, memory):
     
     instruction_descriptor = str(memory[ptr])
@@ -119,6 +192,10 @@ def get_instruction(ptr, memory):
         2: MultiplyInstruction,
         3: InputInstruction,
         4: OutputInstruction,
+        5: JumpIfTrueInstruction,
+        6: JumpIfFalseInstruction,
+        7: LessThanInstruction,
+        8: EqualsInstruction,
     }
     
     try:

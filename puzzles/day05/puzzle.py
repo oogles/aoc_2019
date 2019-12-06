@@ -16,4 +16,4 @@ class P(Puzzle):
     
     def _part2(self, input_data):
         
-        pass
+        return intcode.run_program(input_data)
