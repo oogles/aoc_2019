@@ -2,6 +2,10 @@ class UNSET:
     pass
 
 
+class AwaitInput(Exception):
+    pass
+
+
 class Instruction:
     
     num_input_params = 0
@@ -84,17 +88,10 @@ class InputInstruction(Instruction):
     num_input_params = 0
     has_output_param = True
     
-    def execute(self):
+    def execute(self, value=None):
         
-        while True:
-            value = input('Input: ')
-            
-            try:
-                value = int(value)
-                break
-            except ValueError:
-                print('Invalid input. Must be an integer.')
-                continue
+        if value is None:
+            raise AwaitInput()
         
         return value
 
@@ -107,6 +104,7 @@ class OutputInstruction(Instruction):
     def execute(self, value):
         
         print(value)
+        return value
 
 
 class JumpInstruction(Instruction):
@@ -178,60 +176,135 @@ class EqualsInstruction(Instruction):
         return 0
 
 
-def get_instruction(ptr, memory):
+class Program:
     
-    instruction_descriptor = str(memory[ptr])
-    opcode = int(instruction_descriptor[-2:])
-    param_modes = instruction_descriptor[:-2]
+    def __init__(self, intcodes):
+        
+        self._length = len(intcodes)
+        
+        self._manual_input = None
+        self._output = None
+        
+        self.instruction_pointer = 0
+        self.halt = False
+        self.awaiting_input = False
+        
+        # Initialise memory with a copy of the intcode program
+        self.memory = intcodes[:]
     
-    if opcode == 99:
-        raise StopIteration()
-    
-    opcode_map = {
-        1: AddInstruction,
-        2: MultiplyInstruction,
-        3: InputInstruction,
-        4: OutputInstruction,
-        5: JumpIfTrueInstruction,
-        6: JumpIfFalseInstruction,
-        7: LessThanInstruction,
-        8: EqualsInstruction,
-    }
-    
-    try:
-        instruction = opcode_map[opcode]
-    except KeyError:
-        raise KeyError(f'Unrecognised opcode ({opcode}).')
-    
-    return instruction(ptr, param_modes)
-
-
-def run_program(program):
-    
-    # Initialise memory with a copy of the intcode program
-    memory = program[:]
-    
-    instruction_pointer = 0
-    while instruction_pointer < len(program):
+    def get_instruction(self, ptr):
+        
+        instruction_descriptor = str(self.memory[ptr])
+        opcode = int(instruction_descriptor[-2:])
+        param_modes = instruction_descriptor[:-2]
+        
+        if opcode == 99:
+            raise StopIteration()
+        
+        opcode_map = {
+            1: AddInstruction,
+            2: MultiplyInstruction,
+            3: InputInstruction,
+            4: OutputInstruction,
+            5: JumpIfTrueInstruction,
+            6: JumpIfFalseInstruction,
+            7: LessThanInstruction,
+            8: EqualsInstruction,
+        }
         
         try:
-            instruction = get_instruction(instruction_pointer, memory)
-        except StopIteration:
-            break
+            instruction = opcode_map[opcode]
+        except KeyError:
+            raise KeyError(f'Unrecognised opcode ({opcode}).')
         
-        # Use inputs to execute the instruction and generate a result
-        inputs = instruction.get_input_params(memory)
-        result = instruction.execute(*inputs)
-        
-        # Write output to memory, if necessary
-        output_param = instruction.get_output_param()
-        if output_param is not None:
-            output_pointer = memory[output_param]
-            memory[output_pointer] = result
-        
-        # Proceed to next instruction
-        instruction_pointer = instruction.get_next_instruction_pointer()
-    else:
-        raise Exception('Reached end of program without seeing opcode 99')
+        return instruction(ptr, param_modes)
     
-    return memory[0]
+    def run(self):
+        
+        ptr = self.instruction_pointer
+        
+        while ptr < self._length:
+            try:
+                instruction = self.get_instruction(ptr)
+            except StopIteration:
+                # Successfully reached the end of the program, enter "halt"
+                # state
+                self.halt = True
+                break
+            
+            # Use inputs to execute the instruction and generate a result.
+            # Specific input instructions may require waiting for the input
+            # value/s to be supplied.
+            inputs = instruction.get_input_params(self.memory)
+            if self._manual_input is not None:
+                inputs.append(self._manual_input)
+                self._manual_input = None  # clear manual input value once used
+            
+            try:
+                result = instruction.execute(*inputs)
+            except AwaitInput:
+                self.awaiting_input = True
+                return self._output  # return interstitial output
+            
+            # Store the generated result of output instructions, overwriting
+            # any any generated by a previous output instruction. For all other
+            # instructions, check if they include an output parameter, and
+            # write their result to that location in memory.
+            if isinstance(instruction, OutputInstruction):
+                self._output = result
+            else:
+                output_param = instruction.get_output_param()
+                if output_param is not None:
+                    output_pointer = self.memory[output_param]
+                    self.memory[output_pointer] = result
+            
+            # Proceed to next instruction
+            ptr = self.instruction_pointer = instruction.get_next_instruction_pointer()
+        else:
+            raise Exception('Reached end of program without seeing opcode 99')
+        
+        # Return potentially-interstitial output - get_output() should be used
+        # for retrieving final output
+        return self._output
+    
+    def set_input(self, value):
+        
+        try:
+            value = int(value)
+        except ValueError:
+            print('Invalid input. Must be an integer.')
+            return
+        
+        self._manual_input = value
+        self.awaiting_input = False
+    
+    def get_output(self):
+        
+        if not self.halt:
+            raise Exception('Program was not successfully terminated')
+        
+        # Return explicitly-generated output if there is any, otherwise return
+        # the value in memory address 0
+        output = self._output
+        if output is not None:
+            return output
+        else:
+            return self.memory[0]
+
+
+def run_program(program, manual_inputs=None):
+    
+    program = Program(program)
+    
+    while not program.halt:
+        program.run()
+        
+        while program.awaiting_input:
+            if manual_inputs:
+                value = manual_inputs.pop(0)
+            else:
+                value = input('Input: ')
+            
+            program.set_input(value)
+    
+    return program.get_output()

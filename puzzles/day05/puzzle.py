@@ -12,8 +12,22 @@ class P(Puzzle):
     
     def _part1(self, input_data):
         
-        return intcode.run_program(input_data)
+        # One manual input required: the ID of the air conditioning system, to
+        # be tested by the diagnostic program (the puzzle input)
+        if not self.sample:
+            manual_inputs = [1]
+        else:
+            manual_inputs = None
+        
+        return intcode.run_program(input_data, manual_inputs)
     
     def _part2(self, input_data):
         
-        return intcode.run_program(input_data)
+        # One manual input required: the ID of the thermal radiator controller,
+        # to be tested by the diagnostic program (the puzzle input)
+        if not self.sample:
+            manual_inputs = [5]
+        else:
+            manual_inputs = None
+        
+        return intcode.run_program(input_data, manual_inputs)
