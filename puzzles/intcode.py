@@ -132,11 +132,10 @@ class OutputInstruction(Instruction):
     
     def execute(self, state, value):
         
+        # Do not return a result, instead write it to stdout and push it to
+        # the output queue
         print(value)
-        
-        # Does not return a result, instead it updates the overall program's
-        # internal state
-        state['output'] = value
+        state['output_queue'].append(value)
 
 
 class JumpInstruction(Instruction):
@@ -235,7 +234,7 @@ class Program:
         # Initialise the internal state of the program, as accessible/modifiable
         # by instructions
         self.state = {
-            'output': None,
+            'output_queue': [],
             'relative_base': 0
         }
         
@@ -289,8 +288,7 @@ class Program:
             # Use inputs to execute the instruction and generate a result.
             # Specific "input" instructions require manual input entry - the
             # value is not read from memory. If such a value has already been
-            # provided (via set_input()), use it. Otherwise, read inputs as
-            # per usual.
+            # provided (via send()), use it. Otherwise, read inputs as per usual.
             if self._manual_input is not None:
                 inputs = [self._manual_input]
                 self._manual_input = None  # clear manual input value once used
@@ -300,9 +298,9 @@ class Program:
             try:
                 result = instruction.execute(state, *inputs)
             except AwaitInput:
-                # Pause the program to await manual input via set_input()
+                # Pause the program to await manual input via send()
                 self.awaiting_input = True
-                return state['output']  # return interstitial output
+                return
             
             output_param = instruction.get_output_param(state, self.memory)
             if output_param is not None:
@@ -312,34 +310,25 @@ class Program:
             ptr = self.instruction_pointer = instruction.get_next_instruction_pointer()
         else:
             raise Exception('Reached end of program without seeing opcode 99')
-        
-        # Return potentially-interstitial output - get_output() should be used
-        # for retrieving final output
-        return state['output']
     
-    def set_input(self, value):
+    def send(self, value):
         
         try:
             value = int(value)
-        except ValueError:
+        except (ValueError, TypeError):
             print('Invalid input. Must be an integer.')
             return
         
         self._manual_input = value
         self.awaiting_input = False
     
-    def get_output(self):
+    def receive(self):
         
-        if not self.halt:
-            raise Exception('Program was not successfully terminated')
+        # Return a copy of the output queue and clear it once it has been read
+        queue = self.state['output_queue'][:]
+        self.state['output_queue'].clear()
         
-        # Return explicitly-generated output if there is any, otherwise return
-        # the value in memory address 0
-        output = self.state['output']
-        if output is not None:
-            return output
-        else:
-            return self.memory[0]
+        return queue
 
 
 def run_program(program, manual_inputs=None):
@@ -355,6 +344,12 @@ def run_program(program, manual_inputs=None):
             else:
                 value = input('Input: ')
             
-            program.set_input(value)
+            program.send(value)
     
-    return program.get_output()
+    # Return the final explicitly-generated output value if there is any,
+    # otherwise return the value in memory address 0
+    output = program.receive()
+    if output:
+        return output[-1]
+    else:
+        return program.memory[0]

@@ -44,7 +44,7 @@ class P(Puzzle):
             # input - the phase setting
             for i in sequence:
                 amp = intcode.Program(input_data)
-                amp.set_input(i)  # provide phase setting as first input
+                amp.send(i)  # provide phase setting as first input
                 amp.run()  # will run until further input is required
                 amps.append(amp)
             
@@ -55,8 +55,9 @@ class P(Puzzle):
             output = 0
             while not amps[4].halt:
                 for amp in amps:
-                    amp.set_input(output)
-                    output = amp.run()  # will run until further input is required
+                    amp.send(output)
+                    amp.run()  # will run until further input is required
+                    output = amp.receive()[-1]
             
             if output > largest_output:
                 largest_output = output
