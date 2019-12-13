@@ -46,8 +46,8 @@ class P(Puzzle):
         width = self.width
         height = self.height
         
-        # Create a template for the final image
-        final_image = [['*' for i in range(width)] for j in range(height)]
+        # Draw final image
+        final_image = ['\n']
         
         for y in range(height):
             for x in range(width):
@@ -57,15 +57,12 @@ class P(Puzzle):
                     # Use the pixel if it is not transparent, otherwise try the
                     # next layer
                     if pixel in ('0', '1'):
-                        final_image[y][x] = pixel
+                        final_image.append('#' if pixel == '1' else ' ')
                         break
                 else:
                     # Uh-oh, no layer had a non-transparent pixel
                     raise Exception(f'No solid pixel found at any layer for position ({x}, {y})')
             
-            # With the row completed, print it as white text on a black
-            # background
-            row = final_image[y]
-            print(''.join(row).replace('1', '*').replace('0', ' '))
+            final_image.append('\n')
         
-        return 'See output above'
+        return ''.join(final_image)
