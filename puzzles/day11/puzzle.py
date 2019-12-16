@@ -1,5 +1,3 @@
-from io import StringIO
-
 from ..aoc import Puzzle
 from ..intcode import Program
 
